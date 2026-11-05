@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="lite/build/icon.png" alt="Stars Clique Sync icon" width="104">
+  <img src="docs/media/cover.png" alt="Stars Clique Sync, lyric timing for Lite and Auto" width="100%">
 </p>
 
 <h1 align="center">Stars Clique Sync</h1>
@@ -23,6 +23,24 @@
 Both editions let you review the waveform, adjust timestamps, replay lines,
 and export your work. The Auto edition can align supplied lyrics against the
 track while keeping the supplied words.
+
+## Workspace
+
+### Manual Timing
+
+Hold Space for each phrase. The current line stays in view while the waveform
+and playback controls remain visible.
+
+![Stars Clique Sync Lite manual timing with the fourth lyric line selected](docs/media/manual-timing.png)
+
+### Review and Edit
+
+Replay a phrase, adjust its start and end, then save the result for export.
+
+![Stars Clique Sync Auto Edit showing timed regions and editable lyrics](docs/media/edit-timings.png)
+
+Screenshots show the real application with synthetic demo audio and original
+sample lyrics.
 
 ## Quick Start
 
