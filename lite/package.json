@@ -1,7 +1,9 @@
 {
   "name": "stars-clique-sync-lite-desktop",
+  "description": "Stars Clique Sync Lite - manual lyric timing and TTML/LRC export",
+  "author": "Mikhail Mikhalchenko (Goth Angel)",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "main": "electron/main.cjs",
   "scripts": {
@@ -35,6 +37,7 @@
     "electron-builder": "^26.0.12"
   },
   "build": {
+    "artifactName": "Stars-Clique-Sync-Lite-Setup-${version}.${ext}",
     "appId": "com.starsclique.sync.lite",
     "productName": "Stars Clique Sync Lite",
     "directories": {
@@ -62,6 +65,17 @@
       "uninstallerIcon": "build/icon.ico"
     },
     "extraResources": [
+      {
+        "from": "../LICENSE.md",
+        "to": "LICENSE.md"
+      },
+      {
+        "from": "../docs",
+        "to": "manuals",
+        "filter": [
+          "stars-clique-sync-guide-*.pdf"
+        ]
+      },
       {
         "from": "build/icon.png",
         "to": "icon.png"

@@ -15,6 +15,15 @@
 
 ## Editions
 
+### Windows Installers
+
+- [Download Lite 1.0.1](https://github.com/9519860664r-oss/stars-clique-sync/releases/download/v1.0.1/Stars-Clique-Sync-Lite-Setup-1.0.1.exe)
+- [Download Auto 1.0.1](https://github.com/9519860664r-oss/stars-clique-sync/releases/download/v1.0.1/Stars-Clique-Sync-Auto-Setup-1.0.1.exe)
+
+Both installers include English and Russian PDF manuals. Auto downloads its
+Whisper model on first use. See the [release notes](https://github.com/9519860664r-oss/stars-clique-sync/releases/tag/v1.0.1)
+for system requirements and checksums.
+
 | Edition | Workflow |
 | --- | --- |
 | **Lite** | Time your own lyrics by holding Space. Import existing LRC or TTML and edit the text and timings. Runs without Whisper or a separate server. |
