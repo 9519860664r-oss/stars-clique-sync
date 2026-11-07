@@ -15,6 +15,14 @@
 
 ## Editions
 
+### Open Lite in Your Browser
+
+[Launch Stars Clique Sync Lite](https://9519860664r-oss.github.io/stars-clique-sync/)
+
+Use manual timing, import LRC or TTML, edit lines, and export directly in your
+browser. Audio and lyrics stay on your device. Keep the tab open until you have
+exported your work.
+
 ### Windows Installers
 
 - [Download Lite 1.0.1](https://github.com/9519860664r-oss/stars-clique-sync/releases/download/v1.0.1/Stars-Clique-Sync-Lite-Setup-1.0.1.exe)

@@ -3,6 +3,17 @@
 Use Node.js 24 with npm. Auto also needs Python 3.14 and its dependencies.
 The Windows packaging commands target x64 and use PowerShell.
 
+## Lite on GitHub Pages
+
+The hosted [Lite app](https://9519860664r-oss.github.io/stars-clique-sync/) is
+built by [the Pages workflow](../.github/workflows/deploy-lite.yml). Pushes to
+`main` that change `lite/` or the workflow trigger deployment. You can also
+start the workflow manually from the repository's Actions tab.
+
+The workflow checks and builds Lite on Node.js 24 with the repository path as
+Vite's base URL, then publishes `lite/dist/`. Set the repository's Pages source
+to GitHub Actions. Audio and lyric editing run in the visitor's browser.
+
 ## How to Run Auto
 
 In the first terminal, from the repository root:
