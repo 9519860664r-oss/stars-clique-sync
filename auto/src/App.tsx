@@ -472,7 +472,7 @@ function App() {
   const [duration, setDuration] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
   const [syncStart, setSyncStart] = useState<number | null>(null)
-  const [ttmlProfile, setTtmlProfile] = useState<TtmlProfile>('standard')
+  const [ttmlProfile, setTtmlProfile] = useState<TtmlProfile>('zvonko')
   const [ttmlTitle, setTtmlTitle] = useState('')
   const [ttmlArtist, setTtmlArtist] = useState('')
   const [ttmlLanguage, setTtmlLanguage] = useState<'en-US' | 'ru-RU'>('en-US')
@@ -869,6 +869,7 @@ function App() {
     setTtmlTitle('')
     setTtmlArtist('')
     setAudioUrl(null)
+    setTtmlProfile('zvonko')
     setLyricsSource('paste')
     setLyricsText('')
     setRecognizedLyricsText('')
@@ -1482,8 +1483,8 @@ function App() {
             </label>
             {ttmlProfile === 'zvonko' && (
               <div className="ttml-metadata">
-                <label>Track title<input value={ttmlTitle} onChange={(event) => setTtmlTitle(event.target.value)} /></label>
-                <label>Artist<input value={ttmlArtist} onChange={(event) => setTtmlArtist(event.target.value)} /></label>
+                <label>Track title<input placeholder="Optional" value={ttmlTitle} onChange={(event) => setTtmlTitle(event.target.value)} /></label>
+                <label>Artist<input placeholder="Optional" value={ttmlArtist} onChange={(event) => setTtmlArtist(event.target.value)} /></label>
                 <label>
                   Lyrics language
                   <select value={ttmlLanguage} onChange={(event) => setTtmlLanguage(event.target.value as 'en-US' | 'ru-RU')}>

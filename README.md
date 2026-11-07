@@ -25,11 +25,11 @@ exported your work.
 
 ### Windows Installers
 
-- [Download Lite 1.0.2](https://github.com/9519860664r-oss/stars-clique-sync/releases/download/v1.0.2/Stars-Clique-Sync-Lite-Setup-1.0.2.exe)
-- [Download Auto 1.0.2](https://github.com/9519860664r-oss/stars-clique-sync/releases/download/v1.0.2/Stars-Clique-Sync-Auto-Setup-1.0.2.exe)
+- [Download Lite 1.0.3](https://github.com/9519860664r-oss/stars-clique-sync/releases/download/v1.0.3/Stars-Clique-Sync-Lite-Setup-1.0.3.exe)
+- [Download Auto 1.0.3](https://github.com/9519860664r-oss/stars-clique-sync/releases/download/v1.0.3/Stars-Clique-Sync-Auto-Setup-1.0.3.exe)
 
 Both installers include English and Russian PDF manuals. Auto downloads its
-Whisper model on first use. See the [release notes](https://github.com/9519860664r-oss/stars-clique-sync/releases/tag/v1.0.2)
+Whisper model on first use. See the [release notes](https://github.com/9519860664r-oss/stars-clique-sync/releases/tag/v1.0.3)
 for system requirements and checksums.
 
 | Edition | Workflow |
@@ -76,8 +76,11 @@ phrase and release it at the end. Review the result in **Edit**, then select
 
 ## Zvonko TTML Export
 
-In **Out**, choose **Zvonko TTML**, enter the track title and artist, then
-download **TTML**. This profile follows the structure of a file exported by
+In **Out**, **Zvonko TTML** is selected by default. Track title and artist are
+optional: blank fields are omitted from the file, and filled fields are included
+independently. With no metadata, the download uses the audio filename.
+The title field is prefilled from the audio filename; edit or clear it as needed.
+Download **TTML** when ready. This profile follows the structure of a file exported by
 Zvonko's own synced-lyrics editor, including title and artist metadata.
 English is the editor's default language tag; Russian is also available.
 

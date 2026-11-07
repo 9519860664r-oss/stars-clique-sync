@@ -45,9 +45,32 @@ test('blocks missing, nonfinite, negative, reversed, empty and submillisecond in
     { text: 'a', start: -1, end: 3 }, { text: 'a', start: 5, end: 4 },
     { text: '', start: 1, end: 2 }, { text: 'a', start: 1.0001, end: 1.0002 },
   ]) assert.throws(() => exportTtml([line], options))
-  assert.throws(() => exportTtml(lines, { ...options, title: '' }))
-  assert.throws(() => exportTtml(lines, { ...options, artist: '' }))
   assert.throws(() => exportTtml(lines, { ...options, duration: 0 }))
+})
+
+test('Zvonko exports without metadata when both optional fields are blank', () => {
+  const blank = { ...options, title: '  ', artist: '' }
+  assert.deepEqual(validateTtml(lines, blank), [])
+  const result = exportTtml(lines, blank)
+  assert(result.includes('xmlns:itunes='))
+  assert(!result.includes('<head>'))
+  assert(!result.includes('<ttm:title>'))
+  assert(!result.includes('<ttm:agent'))
+  assert.equal(ttmlFilename(blank, 'audio-master'), 'audio-master.ttml')
+})
+
+test('Zvonko includes only the supplied title or artist', () => {
+  const titleOnly = { ...options, title: ' Track ', artist: '' }
+  const artistOnly = { ...options, title: '', artist: ' Artist ' }
+  const titled = exportTtml(lines, titleOnly)
+  assert(titled.includes('<ttm:title>Track</ttm:title>'))
+  assert(!titled.includes('<ttm:agent'))
+  const credited = exportTtml(lines, artistOnly)
+  assert(credited.includes('<ttm:name type="full">Artist</ttm:name>'))
+  assert(!credited.includes('<metadata>'))
+  assert.equal(ttmlFilename(titleOnly, 'audio-master'), 'Track.ttml')
+  assert.equal(ttmlFilename(artistOnly, 'audio-master'), 'Artist.ttml')
+  assert.throws(() => exportTtml(lines, { ...titleOnly, title: 'bad\u0001' }))
 })
 test('rejects XML control characters and sanitizes filenames', () => {
   assert.throws(() => exportTtml([{ ...lines[0], text: 'bad\u0001' }], options))

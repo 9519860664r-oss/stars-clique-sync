@@ -202,8 +202,8 @@ def zvonko(pdf, copy, lang):
         "en": {
             "intro": "Export a file shaped like Zvonko's own synced-lyrics editor output.",
             "steps": [
-                ("Choose the profile", "On <b>Out</b>, select <b>Zvonko TTML</b>. Standard TTML remains available for other workflows."),
-                ("Add the release details", "Enter <b>Track title</b> and <b>Artist</b>. The English language tag matches Zvonko's default; Russian is also available."),
+                ("Zvonko is the default", "On <b>Out</b>, <b>Zvonko TTML</b> is already selected. Standard TTML remains available for other workflows."),
+                ("Optional release details", "<b>Track title</b> is prefilled from the audio filename: edit or clear it. <b>Artist</b> is optional. Only filled fields are included in the file."),
                 ("Resolve issues and download", "Select <b>Line N</b> in the issue list to return to that row in Edit. Correct the timing, select <b>Save</b>, then download <b>TTML</b>."),
             ],
             "errors": "Timing checks",
@@ -215,8 +215,8 @@ def zvonko(pdf, copy, lang):
         "ru": {
             "intro": "Профиль повторяет структуру файла из редактора синхротекста Звонко.",
             "steps": [
-                ("Выберите профиль", "На экране <b>Out</b> выберите <b>Zvonko TTML</b>. Для других задач остаётся профиль Standard TTML."),
-                ("Укажите данные релиза", "Заполните <b>Track title</b> и <b>Artist</b>. Английский тег языка соответствует настройке Звонко по умолчанию. Можно выбрать Russian."),
+                ("Звонко по умолчанию", "На экране <b>Out</b> уже выбран <b>Zvonko TTML</b>. Для других задач остаётся профиль Standard TTML."),
+                ("Данные релиза необязательны", "<b>Track title</b> подставляется из имени аудио: его можно изменить или очистить. <b>Artist</b> необязателен. В файл попадут только заполненные поля."),
                 ("Исправьте ошибки и скачайте", "Кнопка <b>Line N</b> в списке ошибок открывает нужную строку в Edit. Поправьте тайминги, нажмите <b>Save</b>, затем скачайте <b>TTML</b>."),
             ],
             "errors": "Проверка таймингов",

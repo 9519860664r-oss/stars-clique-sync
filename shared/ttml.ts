@@ -31,8 +31,6 @@ export function validateTtml(lines: ExportLine[], options: TtmlOptions): ExportI
   if (!durationKnown) add(null, 'Audio duration', 'Wait for the audio to load before exporting.')
   if (!lines.length) add(null, 'No lyrics', 'Add at least one lyric line.')
   if (options.profile === 'zvonko') {
-    if (!options.title.trim()) add(null, 'Track title', 'Enter the track title.')
-    if (!options.artist.trim()) add(null, 'Artist', 'Enter the artist name.')
     if (invalidXml.test(options.title + options.artist)) add(null, 'Invalid text', 'Metadata contains unsupported XML characters.')
   }
   let latestEnd = -1
@@ -81,16 +79,15 @@ ${body}
   </body>
 </tt>`
   }
+  const title = options.title.trim()
+  const artist = options.artist.trim()
+  const metadata = [
+    title ? `    <metadata>\n      <ttm:title>${escapeXml(title)}</ttm:title>\n    </metadata>` : '',
+    artist ? `    <ttm:agent xml:id="voice1" type="person">\n      <ttm:name type="full">${escapeXml(artist)}</ttm:name>\n    </ttm:agent>` : '',
+  ].filter(Boolean).join('\n')
+  const head = metadata ? `\n  <head>\n${metadata}\n  </head>` : ''
   return `<?xml version="1.0" encoding="UTF-8"?>
-<tt xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling" xmlns:itunes="http://itunes.apple.com/lyric-ttml-extensions" xmlns:ttm="http://www.w3.org/ns/ttml#metadata" xml:lang="${options.language}">
-  <head>
-    <metadata>
-      <ttm:title>${escapeXml(options.title.trim())}</ttm:title>
-    </metadata>
-    <ttm:agent xml:id="voice1" type="person">
-      <ttm:name type="full">${escapeXml(options.artist.trim())}</ttm:name>
-    </ttm:agent>
-  </head>
+<tt xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling" xmlns:itunes="http://itunes.apple.com/lyric-ttml-extensions" xmlns:ttm="http://www.w3.org/ns/ttml#metadata" xml:lang="${options.language}">${head}
   <body>
     <div>
 ${body}
@@ -100,6 +97,7 @@ ${body}
 }
 
 export function ttmlFilename(options: TtmlOptions, fallback: string) {
-  const name = options.profile === 'zvonko' ? `${options.title.trim()} - ${options.artist.trim()}` : fallback
+  const metadataName = [options.title.trim(), options.artist.trim()].filter(Boolean).join(' - ')
+  const name = options.profile === 'zvonko' && metadataName ? metadataName : fallback
   return name.replace(/[<>:"/\\|?*\u0000-\u001f]/gu, '_').replace(/[. ]+$/u, '') + '.ttml'
 }
