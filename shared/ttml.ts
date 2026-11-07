@@ -20,8 +20,8 @@ export function formatTtmlTime(time: number) {
 }
 
 export function formatLrcTime(time: number) {
-  const total = Math.round(Math.max(0, time) * 100)
-  return `${pad(Math.floor(total / 6000))}:${pad(Math.floor(total / 100) % 60)}.${pad(total % 100)}`
+  const total = milliseconds(Math.max(0, time))
+  return `${pad(Math.floor(total / 60000))}:${pad(Math.floor(total / 1000) % 60)}.${pad(total % 1000, 3)}`
 }
 
 export function validateTtml(lines: ExportLine[], options: TtmlOptions): ExportIssue[] {

@@ -5,11 +5,19 @@ import { exportTtml, formatLrcTime, formatTtmlTime, ttmlFilename, validateTtml }
 const options = { duration: 257.910438, profile: 'zvonko' as const, title: 'трек', artist: 'артист', language: 'en-US' as const }
 const lines = [{ text: 'я', start: 14.592, end: 16.984 }, { text: 'крутой', start: 17.588, end: 19.677 }]
 
-test('carries rounded milliseconds and centiseconds across minutes and hours', () => {
+test('carries rounded milliseconds across minutes and hours', () => {
   assert.equal(formatTtmlTime(59.9996), '00:01:00.000')
   assert.equal(formatTtmlTime(3599.9996), '01:00:00.000')
-  assert.equal(formatLrcTime(59.9996), '01:00.00')
+  assert.equal(formatLrcTime(59.9996), '01:00.000')
   assert.equal(formatTtmlTime(14.592), '00:00:14.592')
+})
+
+test('LRC uses three fractional digits and total minutes without an hours field', () => {
+  for (const [input, expected] of [
+    [0, '00:00.000'], [14.592, '00:14.592'], [0.0006, '00:00.001'],
+    [59.9994, '00:59.999'], [59.9996, '01:00.000'],
+    [3599.9996, '60:00.000'], [3600.123, '60:00.123'], [-1, '00:00.000'],
+  ] as const) assert.equal(formatLrcTime(input), expected)
 })
 test('exports the Zvonko reference structure and metadata', () => {
   const result = exportTtml(lines, options)

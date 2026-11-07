@@ -25,11 +25,11 @@ exported your work.
 
 ### Windows Installers
 
-- [Download Lite 1.0.3](https://github.com/9519860664r-oss/stars-clique-sync/releases/download/v1.0.3/Stars-Clique-Sync-Lite-Setup-1.0.3.exe)
-- [Download Auto 1.0.3](https://github.com/9519860664r-oss/stars-clique-sync/releases/download/v1.0.3/Stars-Clique-Sync-Auto-Setup-1.0.3.exe)
+- [Download Lite 1.0.4](https://github.com/9519860664r-oss/stars-clique-sync/releases/download/v1.0.4/Stars-Clique-Sync-Lite-Setup-1.0.4.exe)
+- [Download Auto 1.0.4](https://github.com/9519860664r-oss/stars-clique-sync/releases/download/v1.0.4/Stars-Clique-Sync-Auto-Setup-1.0.4.exe)
 
 Both installers include English and Russian PDF manuals. Auto downloads its
-Whisper model on first use. See the [release notes](https://github.com/9519860664r-oss/stars-clique-sync/releases/tag/v1.0.3)
+Whisper model on first use. See the [release notes](https://github.com/9519860664r-oss/stars-clique-sync/releases/tag/v1.0.4)
 for system requirements and checksums.
 
 | Edition | Workflow |
@@ -73,6 +73,11 @@ Open [127.0.0.1:5174](http://127.0.0.1:5174/). Choose an audio file, paste one
 lyric phrase per line, and select **Continue**. Press Space at the start of each
 phrase and release it at the end. Review the result in **Edit**, then select
 **Save** and choose an export format.
+
+## LRC Export
+
+LRC exports in both editions use millisecond timestamps, for example
+`[00:14.592]Lyric line`. Minutes are not split into an hours field.
 
 ## Zvonko TTML Export
 
