@@ -200,10 +200,10 @@ def review(pdf, copy, lang):
 def zvonko(pdf, copy, lang):
     content = {
         "en": {
-            "intro": "Export a file shaped like Zvonko's own synced-lyrics editor output.",
+            "intro": "Review the optional track details, then download your timed lyrics.",
             "steps": [
-                ("Zvonko is the default", "On <b>Out</b>, <b>Zvonko TTML</b> is already selected. Standard TTML remains available for other workflows."),
-                ("Optional release details", "<b>Track title</b> is prefilled from the audio filename: edit or clear it. <b>Artist</b> is optional. Only filled fields are included in the file."),
+                ("Optional track details", "On <b>Out</b>, only <b>Title</b>, <b>Subtitle</b>, and <b>Artist</b> are shown. All three are optional. Title is prefilled from the audio filename: edit or clear it."),
+                ("Add a version when needed", "<b>Subtitle</b> is a version label. Title <b>Song</b> and subtitle <b>Acoustic</b> export as <b>Song (Acoustic)</b>. Blank fields are omitted from the file."),
                 ("Resolve issues and download", "Select <b>Line N</b> in the issue list to return to that row in Edit. Correct the timing, select <b>Save</b>, then download <b>TTML</b>."),
             ],
             "errors": "Timing checks",
@@ -213,10 +213,10 @@ def zvonko(pdf, copy, lang):
             "limit": "Use the same audio master for timing and delivery. Passing local checks does not guarantee Zvonko moderation approval; their complete validation rules are not public.",
         },
         "ru": {
-            "intro": "Профиль повторяет структуру файла из редактора синхротекста Звонко.",
+            "intro": "Проверьте необязательные данные трека и скачайте синхротекст.",
             "steps": [
-                ("Звонко по умолчанию", "На экране <b>Out</b> уже выбран <b>Zvonko TTML</b>. Для других задач остаётся профиль Standard TTML."),
-                ("Данные релиза необязательны", "<b>Track title</b> подставляется из имени аудио: его можно изменить или очистить. <b>Artist</b> необязателен. В файл попадут только заполненные поля."),
+                ("Данные трека необязательны", "На экране <b>Out</b> только поля <b>Title</b>, <b>Subtitle</b> и <b>Artist</b>. Все можно оставить пустыми. Title подставляется из имени аудио: измените или очистите его."),
+                ("Версия трека при необходимости", "<b>Subtitle</b> обозначает версию. Title <b>Песня</b> и Subtitle <b>Acoustic</b> сохраняются как <b>Песня (Acoustic)</b>. Пустые поля не добавляются в файл."),
                 ("Исправьте ошибки и скачайте", "Кнопка <b>Line N</b> в списке ошибок открывает нужную строку в Edit. Поправьте тайминги, нажмите <b>Save</b>, затем скачайте <b>TTML</b>."),
             ],
             "errors": "Проверка таймингов",
@@ -227,7 +227,7 @@ def zvonko(pdf, copy, lang):
         },
     }[lang]
     header(pdf, copy, lang, 4)
-    text(pdf, "Zvonko TTML", M, 88, 33, INK, "Segoe-Bold")
+    text(pdf, "TTML Export" if lang == "en" else "Экспорт TTML", M, 88, 33, INK, "Segoe-Bold")
     block(pdf, content["intro"], M, 143, CONTENT, limit=175)
     for index, item in enumerate(content["steps"]):
         top = 187 + index * 98

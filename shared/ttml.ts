@@ -1,12 +1,9 @@
-export type TtmlProfile = 'standard' | 'zvonko'
-
 type ExportLine = { text: string; start: number | null; end: number | null }
 export type TtmlOptions = {
   duration: number
-  profile: TtmlProfile
   title: string
+  subtitle: string
   artist: string
-  language: 'en-US' | 'ru-RU'
 }
 export type ExportIssue = { line: number | null; code: string; message: string }
 
@@ -30,9 +27,7 @@ export function validateTtml(lines: ExportLine[], options: TtmlOptions): ExportI
   const durationKnown = Number.isFinite(options.duration) && options.duration > 0
   if (!durationKnown) add(null, 'Audio duration', 'Wait for the audio to load before exporting.')
   if (!lines.length) add(null, 'No lyrics', 'Add at least one lyric line.')
-  if (options.profile === 'zvonko') {
-    if (invalidXml.test(options.title + options.artist)) add(null, 'Invalid text', 'Metadata contains unsupported XML characters.')
-  }
+  if (invalidXml.test(options.title + options.subtitle + options.artist)) add(null, 'Invalid text', 'Metadata contains unsupported XML characters.')
   let latestEnd = -1
   let latestLine = 0
   lines.forEach((line, index) => {
@@ -65,21 +60,17 @@ export function validateTtml(lines: ExportLine[], options: TtmlOptions): ExportI
 const escapeXml = (value: string) => value.replaceAll('&', '&amp;').replaceAll('<', '&lt;')
   .replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&apos;')
 
+function trackTitle(options: TtmlOptions) {
+  const title = options.title.trim()
+  const subtitle = options.subtitle.trim()
+  return title && subtitle ? `${title} (${subtitle})` : title || subtitle
+}
+
 export function exportTtml(lines: ExportLine[], options: TtmlOptions) {
   const issues = validateTtml(lines, options)
   if (issues.length) throw new Error(issues.map(issue => `${issue.line ? `Line ${issue.line}: ` : ''}${issue.code} - ${issue.message}`).join('\n'))
   const body = lines.map(line => `      <p begin="${formatTtmlTime(line.start!)}" end="${formatTtmlTime(line.end!)}">${escapeXml(line.text.trim())}</p>`).join('\n')
-  if (options.profile === 'standard') {
-    return `<?xml version="1.0" encoding="UTF-8"?>
-<tt xmlns="http://www.w3.org/ns/ttml">
-  <body>
-    <div>
-${body}
-    </div>
-  </body>
-</tt>`
-  }
-  const title = options.title.trim()
+  const title = trackTitle(options)
   const artist = options.artist.trim()
   const metadata = [
     title ? `    <metadata>\n      <ttm:title>${escapeXml(title)}</ttm:title>\n    </metadata>` : '',
@@ -87,7 +78,7 @@ ${body}
   ].filter(Boolean).join('\n')
   const head = metadata ? `\n  <head>\n${metadata}\n  </head>` : ''
   return `<?xml version="1.0" encoding="UTF-8"?>
-<tt xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling" xmlns:itunes="http://itunes.apple.com/lyric-ttml-extensions" xmlns:ttm="http://www.w3.org/ns/ttml#metadata" xml:lang="${options.language}">${head}
+<tt xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling" xmlns:itunes="http://itunes.apple.com/lyric-ttml-extensions" xmlns:ttm="http://www.w3.org/ns/ttml#metadata" xml:lang="en-US">${head}
   <body>
     <div>
 ${body}
@@ -97,7 +88,7 @@ ${body}
 }
 
 export function ttmlFilename(options: TtmlOptions, fallback: string) {
-  const metadataName = [options.title.trim(), options.artist.trim()].filter(Boolean).join(' - ')
-  const name = options.profile === 'zvonko' && metadataName ? metadataName : fallback
+  const metadataName = [trackTitle(options), options.artist.trim()].filter(Boolean).join(' - ')
+  const name = metadataName || fallback
   return name.replace(/[<>:"/\\|?*\u0000-\u001f]/gu, '_').replace(/[. ]+$/u, '') + '.ttml'
 }

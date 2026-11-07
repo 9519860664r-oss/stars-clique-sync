@@ -15,7 +15,7 @@ import {
   Sparkles,
   TimerReset,
 } from 'lucide-react'
-import { exportTtml, formatLrcTime, ttmlFilename, validateTtml, type TtmlProfile } from '../../shared/ttml'
+import { exportTtml, formatLrcTime, ttmlFilename, validateTtml } from '../../shared/ttml'
 import './App.css'
 
 type AppStep = 'in' | 'timing' | 'out'
@@ -472,10 +472,9 @@ function App() {
   const [duration, setDuration] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
   const [syncStart, setSyncStart] = useState<number | null>(null)
-  const [ttmlProfile, setTtmlProfile] = useState<TtmlProfile>('zvonko')
   const [ttmlTitle, setTtmlTitle] = useState('')
+  const [ttmlSubtitle, setTtmlSubtitle] = useState('')
   const [ttmlArtist, setTtmlArtist] = useState('')
-  const [ttmlLanguage, setTtmlLanguage] = useState<'en-US' | 'ru-RU'>('en-US')
 
   const safeLines = useMemo(() => lines.filter(isLyricLine), [lines])
   const activeIndex = safeLines.findIndex((line) => line.id === activeLineId)
@@ -497,8 +496,8 @@ function App() {
   }, [currentTime, step, timedLines, timingMode])
 
   const ttmlOptions = useMemo(() => ({
-    duration, profile: ttmlProfile, title: ttmlTitle, artist: ttmlArtist, language: ttmlLanguage,
-  }), [duration, ttmlProfile, ttmlTitle, ttmlArtist, ttmlLanguage])
+    duration, title: ttmlTitle, subtitle: ttmlSubtitle, artist: ttmlArtist,
+  }), [duration, ttmlTitle, ttmlSubtitle, ttmlArtist])
   const ttmlIssues = useMemo(() => validateTtml(safeLines, ttmlOptions), [safeLines, ttmlOptions])
 
   const currentStepIndex = steps.indexOf(step)
@@ -866,10 +865,10 @@ function App() {
     setStep('in')
     setAudioFile(null)
     setAudioName(null)
+    setTtmlSubtitle('')
     setTtmlTitle('')
     setTtmlArtist('')
     setAudioUrl(null)
-    setTtmlProfile('zvonko')
     setLyricsSource('paste')
     setLyricsText('')
     setRecognizedLyricsText('')
@@ -1007,6 +1006,7 @@ function App() {
     if (audioUrl) URL.revokeObjectURL(audioUrl)
     setAudioFile(file)
     setAudioName(file.name)
+    setTtmlSubtitle('')
     setTtmlTitle(file.name.replace(/\.[^.]+$/, ''))
     setTtmlArtist('')
     setAudioUrl(URL.createObjectURL(file))
@@ -1473,27 +1473,10 @@ function App() {
             <p>{ttmlIssues.length ? 'TTML needs review.' : <><Check size={16} /> TTML checks passed.</>}</p>
           </div>
 
-          <section className="surface ttml-options" aria-label="TTML export settings">
-            <label>
-              TTML profile
-              <select value={ttmlProfile} onChange={(event) => setTtmlProfile(event.target.value as TtmlProfile)}>
-                <option value="standard">Standard TTML</option>
-                <option value="zvonko">Zvonko TTML</option>
-              </select>
-            </label>
-            {ttmlProfile === 'zvonko' && (
-              <div className="ttml-metadata">
-                <label>Track title<input placeholder="Optional" value={ttmlTitle} onChange={(event) => setTtmlTitle(event.target.value)} /></label>
-                <label>Artist<input placeholder="Optional" value={ttmlArtist} onChange={(event) => setTtmlArtist(event.target.value)} /></label>
-                <label>
-                  Lyrics language
-                  <select value={ttmlLanguage} onChange={(event) => setTtmlLanguage(event.target.value as 'en-US' | 'ru-RU')}>
-                    <option value="en-US">English (Zvonko default)</option>
-                    <option value="ru-RU">Russian</option>
-                  </select>
-                </label>
-              </div>
-            )}
+          <section className="surface ttml-options ttml-metadata" aria-label="Track details">
+            <label>Title<input placeholder="Optional" value={ttmlTitle} onChange={(event) => setTtmlTitle(event.target.value)} /></label>
+            <label>Subtitle<input placeholder="Optional" value={ttmlSubtitle} onChange={(event) => setTtmlSubtitle(event.target.value)} /></label>
+            <label>Artist<input placeholder="Optional" value={ttmlArtist} onChange={(event) => setTtmlArtist(event.target.value)} /></label>
           </section>
           {ttmlIssues.length > 0 && (
             <section className="surface ttml-checks" aria-label="TTML checks">

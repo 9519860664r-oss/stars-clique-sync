@@ -809,7 +809,6 @@ kbd {
   font-size: 13px;
 }
 
-.ttml-options select,
 .ttml-options input {
   min-width: 0;
   width: 100%;
@@ -826,7 +825,6 @@ kbd {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
-  margin-top: 16px;
 }
 
 .ttml-checks h2 {

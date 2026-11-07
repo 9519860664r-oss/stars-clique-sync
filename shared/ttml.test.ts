@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { exportTtml, formatLrcTime, formatTtmlTime, ttmlFilename, validateTtml } from './ttml.ts'
 
-const options = { duration: 257.910438, profile: 'zvonko' as const, title: 'трек', artist: 'артист', language: 'en-US' as const }
+const options = { duration: 257.910438, title: 'трек', subtitle: '', artist: 'артист' }
 const lines = [{ text: 'я', start: 14.592, end: 16.984 }, { text: 'крутой', start: 17.588, end: 19.677 }]
 
 test('carries rounded milliseconds across minutes and hours', () => {
@@ -28,16 +28,21 @@ test('exports the Zvonko reference structure and metadata', () => {
   assert(result.includes('<p begin="00:00:14.592" end="00:00:16.984">я</p>'))
   assert.equal(ttmlFilename(options, 'demo'), 'трек - артист.ttml')
 })
-test('escapes XML and retains Russian lyrics and language', () => {
-  const result = exportTtml([{ ...lines[0], text: ' Ты & я <вместе> ' }], { ...options, title: '"A&B"', language: 'ru-RU' })
-  assert(result.includes('xml:lang="ru-RU"'))
+test('escapes XML and retains Russian lyrics with the reference language tag', () => {
+  const result = exportTtml([{ ...lines[0], text: ' Ты & я <вместе> ' }], { ...options, title: '"A&B"' })
+  assert(result.includes('xml:lang="en-US"'))
   assert(result.includes('&quot;A&amp;B&quot;'))
   assert(result.includes('>Ты &amp; я &lt;вместе&gt;</p>'))
 })
-test('standard exports keep the minimal structure and do not require metadata', () => {
-  const result = exportTtml(lines, { ...options, profile: 'standard', title: '', artist: '' })
-  assert(result.includes('<tt xmlns="http://www.w3.org/ns/ttml">'))
-  assert(!result.includes('ttm:title'))
+test('subtitle is optional and exported as a title version without new XML tags', () => {
+  const version = { ...options, subtitle: ' Acoustic & live ' }
+  assert(exportTtml(lines, version).includes('<ttm:title>трек (Acoustic &amp; live)</ttm:title>'))
+  assert.equal(ttmlFilename(version, 'demo'), 'трек (Acoustic & live) - артист.ttml')
+  assert(!exportTtml(lines, version).includes('<ttm:subtitle'))
+  const subtitleOnly = { ...options, title: '', subtitle: 'Live', artist: '' }
+  assert(exportTtml(lines, subtitleOnly).includes('<ttm:title>Live</ttm:title>'))
+  assert.equal(ttmlFilename(subtitleOnly, 'demo'), 'Live.ttml')
+  assert.throws(() => exportTtml(lines, { ...version, subtitle: 'bad\u0001' }))
 })
 test('identifies exact rows exceeding duration and crossing earlier intervals', () => {
   assert(validateTtml([{ text: 'a', start: 0, end: 300 }], options).some(issue => issue.code === 'Exceeding Time' && issue.line === 1))
@@ -56,8 +61,8 @@ test('blocks missing, nonfinite, negative, reversed, empty and submillisecond in
   assert.throws(() => exportTtml(lines, { ...options, duration: 0 }))
 })
 
-test('Zvonko exports without metadata when both optional fields are blank', () => {
-  const blank = { ...options, title: '  ', artist: '' }
+test('exports without metadata when all optional fields are blank', () => {
+  const blank = { ...options, title: '  ', subtitle: ' ', artist: '' }
   assert.deepEqual(validateTtml(lines, blank), [])
   const result = exportTtml(lines, blank)
   assert(result.includes('xmlns:itunes='))

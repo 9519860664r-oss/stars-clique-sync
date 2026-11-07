@@ -25,11 +25,11 @@ exported your work.
 
 ### Windows Installers
 
-- [Download Lite 1.0.4](https://github.com/9519860664r-oss/stars-clique-sync/releases/download/v1.0.4/Stars-Clique-Sync-Lite-Setup-1.0.4.exe)
-- [Download Auto 1.0.4](https://github.com/9519860664r-oss/stars-clique-sync/releases/download/v1.0.4/Stars-Clique-Sync-Auto-Setup-1.0.4.exe)
+- [Download Lite 1.0.5](https://github.com/9519860664r-oss/stars-clique-sync/releases/download/v1.0.5/Stars-Clique-Sync-Lite-Setup-1.0.5.exe)
+- [Download Auto 1.0.5](https://github.com/9519860664r-oss/stars-clique-sync/releases/download/v1.0.5/Stars-Clique-Sync-Auto-Setup-1.0.5.exe)
 
 Both installers include English and Russian PDF manuals. Auto downloads its
-Whisper model on first use. See the [release notes](https://github.com/9519860664r-oss/stars-clique-sync/releases/tag/v1.0.4)
+Whisper model on first use. See the [release notes](https://github.com/9519860664r-oss/stars-clique-sync/releases/tag/v1.0.5)
 for system requirements and checksums.
 
 | Edition | Workflow |
@@ -79,17 +79,19 @@ phrase and release it at the end. Review the result in **Edit**, then select
 LRC exports in both editions use millisecond timestamps, for example
 `[00:14.592]Lyric line`. Minutes are not split into an hours field.
 
-## Zvonko TTML Export
+## TTML Export
 
-In **Out**, **Zvonko TTML** is selected by default. Track title and artist are
-optional: blank fields are omitted from the file, and filled fields are included
-independently. With no metadata, the download uses the audio filename.
-The title field is prefilled from the audio filename; edit or clear it as needed.
-Download **TTML** when ready. This profile follows the structure of a file exported by
-Zvonko's own synced-lyrics editor, including title and artist metadata.
-English is the editor's default language tag; Russian is also available.
+In **Out**, fill in **Title**, **Subtitle**, and **Artist**, or leave them blank.
+The title is prefilled from the audio filename; edit or clear it as needed.
+Subtitle is a version label: `Song` plus `Acoustic` exports as `Song (Acoustic)`.
+Only supplied details are included. With no metadata, the download uses the audio
+filename. Select **TTML** when ready.
 
-Both profiles check every line before exporting. **Exceeding Time** flags a
+There is one TTML exporter, based on Zvonko's reference structure. There are no
+profile or language selectors. The reference XML language tag is retained;
+Russian and English lyric text are both preserved unchanged.
+
+The exporter checks every line before downloading. **Exceeding Time** flags a
 start or end beyond the loaded audio's duration. **Time Crossing** flags an
 interval that starts before an earlier line ends. Missing, reversed, negative,
 or sub-millisecond timings also block TTML export. Select **Line N** to return
