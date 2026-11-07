@@ -197,6 +197,52 @@ def review(pdf, copy, lang):
     pdf.showPage()
 
 
+def zvonko(pdf, copy, lang):
+    content = {
+        "en": {
+            "intro": "Export a file shaped like Zvonko's own synced-lyrics editor output.",
+            "steps": [
+                ("Choose the profile", "On <b>Out</b>, select <b>Zvonko TTML</b>. Standard TTML remains available for other workflows."),
+                ("Add the release details", "Enter <b>Track title</b> and <b>Artist</b>. The English language tag matches Zvonko's default; Russian is also available."),
+                ("Resolve issues and download", "Select <b>Line N</b> in the issue list to return to that row in Edit. Correct the timing, select <b>Save</b>, then download <b>TTML</b>."),
+            ],
+            "errors": "Timing checks",
+            "exceed": "A line starts or ends after the loaded audio ends. Compare its End with the exact duration of your delivery master.",
+            "cross": "A line starts before an earlier line ends. Review both intervals by ear and fix their boundaries.",
+            "note": "Missing, negative, reversed and sub-millisecond intervals also block TTML export. LRC and JSON remain available for backup. Checks never shift or drop lyrics automatically.",
+            "limit": "Use the same audio master for timing and delivery. Passing local checks does not guarantee Zvonko moderation approval; their complete validation rules are not public.",
+        },
+        "ru": {
+            "intro": "Профиль повторяет структуру файла из редактора синхротекста Звонко.",
+            "steps": [
+                ("Выберите профиль", "На экране <b>Out</b> выберите <b>Zvonko TTML</b>. Для других задач остаётся профиль Standard TTML."),
+                ("Укажите данные релиза", "Заполните <b>Track title</b> и <b>Artist</b>. Английский тег языка соответствует настройке Звонко по умолчанию. Можно выбрать Russian."),
+                ("Исправьте ошибки и скачайте", "Кнопка <b>Line N</b> в списке ошибок открывает нужную строку в Edit. Поправьте тайминги, нажмите <b>Save</b>, затем скачайте <b>TTML</b>."),
+            ],
+            "errors": "Проверка таймингов",
+            "exceed": "Начало или конец строки выходит за длительность аудио. Сравните End с точной длиной мастер-файла для доставки.",
+            "cross": "Строка начинается раньше, чем закончилась одна из предыдущих. Переслушайте обе строки и поправьте границы.",
+            "note": "Пропущенные, отрицательные, обратные и слишком короткие интервалы тоже блокируют TTML. LRC и JSON доступны для резервной копии. Проверки не сдвигают и не удаляют строки.",
+            "limit": "Размечайте тот же мастер, который отправите дистрибьютору. Успешная локальная проверка не гарантирует приём Звонко: полные правила их валидатора не опубликованы.",
+        },
+    }[lang]
+    header(pdf, copy, lang, 4)
+    text(pdf, "Zvonko TTML", M, 88, 33, INK, "Segoe-Bold")
+    block(pdf, content["intro"], M, 143, CONTENT, limit=175)
+    for index, item in enumerate(content["steps"]):
+        top = 187 + index * 98
+        step(pdf, index + 1, *item, top, top + 89)
+    rule(pdf, M, 481, W - M)
+    text(pdf, content["errors"], M, 497, 21, INK, "Segoe-Bold")
+    for index, (name, key) in enumerate((("Exceeding Time", "exceed"), ("Time Crossing", "cross"))):
+        top = 537 + index * 67
+        text(pdf, name, M, top, 13, PURPLE, "Mono")
+        block(pdf, content[key], M + 155, top, CONTENT - 155, 11, limit=top + 61)
+    block(pdf, content["note"], M, 681, CONTENT, 10, limit=727)
+    block(pdf, content["limit"], M, 738, CONTENT, 9, limit=782)
+    pdf.showPage()
+
+
 def main():
     fonts = Path(os.environ.get("WINDIR", "C:/Windows")) / "Fonts"
     for name, filename in (("Segoe", "segoeui.ttf"), ("Segoe-Bold", "segoeuib.ttf"), ("Mono", "consola.ttf")):
@@ -211,6 +257,7 @@ def main():
         cover(pdf, copy, lang)
         manual(pdf, copy, lang)
         review(pdf, copy, lang)
+        zvonko(pdf, copy, lang)
         pdf.save()
 
 

@@ -15,6 +15,7 @@ import {
   Sparkles,
   TimerReset,
 } from 'lucide-react'
+import { exportTtml, formatLrcTime, ttmlFilename, validateTtml, type TtmlProfile } from '../../shared/ttml'
 import './App.css'
 
 type AppStep = 'in' | 'timing' | 'out'
@@ -90,40 +91,12 @@ const pad = (value: number, size = 2) => String(value).padStart(size, '0')
 
 const formatClock = (seconds: number | null) => {
   if (seconds === null || Number.isNaN(seconds)) return '--:--.---'
-  const safe = Math.max(0, seconds)
-  const minutes = Math.floor(safe / 60)
-  const rest = safe - minutes * 60
-  const wholeSeconds = Math.floor(rest)
-  const millis = Math.round((rest - wholeSeconds) * 1000)
+  const total = Math.round(Math.max(0, seconds) * 1000)
+  const minutes = Math.floor(total / 60000)
+  const wholeSeconds = Math.floor(total / 1000) % 60
+  const millis = total % 1000
   return `${pad(minutes)}:${pad(wholeSeconds)}.${pad(millis, 3)}`
 }
-
-const formatLrcTime = (seconds: number) => {
-  const safe = Math.max(0, seconds)
-  const minutes = Math.floor(safe / 60)
-  const rest = safe - minutes * 60
-  const wholeSeconds = Math.floor(rest)
-  const hundredths = Math.round((rest - wholeSeconds) * 100)
-  return `${pad(minutes)}:${pad(wholeSeconds)}.${pad(hundredths)}`
-}
-
-const formatTtmlTime = (seconds: number) => {
-  const safe = Math.max(0, seconds)
-  const hours = Math.floor(safe / 3600)
-  const minutes = Math.floor((safe % 3600) / 60)
-  const wholeSeconds = Math.floor(safe % 60)
-  const millis = Math.round((safe - Math.floor(safe)) * 1000)
-  return `${pad(hours)}:${pad(minutes)}:${pad(wholeSeconds)}.${pad(millis, 3)}`
-}
-
-const escapeXml = (value: string) =>
-  value
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&apos;')
-
 const makeLines = (lyrics: string): LyricLine[] =>
   lyrics
     .split(/\r?\n/)
@@ -430,26 +403,7 @@ const exportLrc = (lines: LyricLine[]) =>
     .map((line) => `[${formatLrcTime(line.start ?? 0)}]${line.text}`)
     .join('\n')
 
-const exportTtml = (lines: LyricLine[]) => {
-  const body = lines
-    .filter(hasLineTiming)
-    .map(
-      (line) =>
-        `      <p begin="${formatTtmlTime(line.start ?? 0)}" end="${formatTtmlTime(
-          line.end ?? line.start ?? 0,
-        )}">${escapeXml(line.text)}</p>`,
-    )
-    .join('\n')
 
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<tt xmlns="http://www.w3.org/ns/ttml">
-  <body>
-    <div>
-${body}
-    </div>
-  </body>
-</tt>`
-}
 
 const exportProject = (lines: LyricLine[], audioName: string | null, mode: SyncMode) =>
   JSON.stringify(
@@ -518,6 +472,10 @@ function App() {
   const [duration, setDuration] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
   const [syncStart, setSyncStart] = useState<number | null>(null)
+  const [ttmlProfile, setTtmlProfile] = useState<TtmlProfile>('standard')
+  const [ttmlTitle, setTtmlTitle] = useState('')
+  const [ttmlArtist, setTtmlArtist] = useState('')
+  const [ttmlLanguage, setTtmlLanguage] = useState<'en-US' | 'ru-RU'>('en-US')
 
   const safeLines = useMemo(() => lines.filter(isLyricLine), [lines])
   const activeIndex = safeLines.findIndex((line) => line.id === activeLineId)
@@ -538,26 +496,10 @@ function App() {
     )
   }, [currentTime, step, timedLines, timingMode])
 
-  const issues = useMemo(() => {
-    const result: string[] = []
-    const emptyCount = safeLines.filter((line) => !hasLineTiming(line)).length
-    const invalidCount = safeLines.filter((line) => {
-      if (!hasLineTiming(line)) return false
-      return line.end <= line.start
-    }).length
-    const overlaps = safeLines.filter((line, index) => {
-      const next = safeLines[index + 1]
-      if (!hasLineTiming(line) || !hasLineStart(next)) return false
-      return line.end > next.start
-    }).length
-
-    if (!audioUrl) result.push('Audio is missing')
-    if (!safeLines.length) result.push('Lyrics are missing')
-    if (emptyCount) result.push(`${emptyCount} lines need timing`)
-    if (invalidCount) result.push(`${invalidCount} lines have invalid timing`)
-    if (overlaps) result.push(`${overlaps} overlaps found`)
-    return result
-  }, [audioUrl, safeLines])
+  const ttmlOptions = useMemo(() => ({
+    duration, profile: ttmlProfile, title: ttmlTitle, artist: ttmlArtist, language: ttmlLanguage,
+  }), [duration, ttmlProfile, ttmlTitle, ttmlArtist, ttmlLanguage])
+  const ttmlIssues = useMemo(() => validateTtml(safeLines, ttmlOptions), [safeLines, ttmlOptions])
 
   const currentStepIndex = steps.indexOf(step)
   const hasPreparedProject = safeLines.length > 0
@@ -924,6 +866,8 @@ function App() {
     setStep('in')
     setAudioFile(null)
     setAudioName(null)
+    setTtmlTitle('')
+    setTtmlArtist('')
     setAudioUrl(null)
     setLyricsSource('paste')
     setLyricsText('')
@@ -1062,6 +1006,8 @@ function App() {
     if (audioUrl) URL.revokeObjectURL(audioUrl)
     setAudioFile(file)
     setAudioName(file.name)
+    setTtmlTitle(file.name.replace(/\.[^.]+$/, ''))
+    setTtmlArtist('')
     setAudioUrl(URL.createObjectURL(file))
     setCurrentTime(0)
     setDuration(0)
@@ -1113,7 +1059,7 @@ function App() {
   }
 
   const onTimeEdit = (lineId: string, field: 'start' | 'end', value: string) => {
-    const parsed = Number(value)
+    const parsed = value.trim() ? Number(value) : NaN
     patchLine(lineId, {
       [field]: Number.isFinite(parsed) ? parsed : null,
       source: 'edited',
@@ -1152,9 +1098,23 @@ function App() {
 
   const exportFile = (format: 'ttml' | 'lrc' | 'json') => {
     const base = (audioName ?? 'stars-clique-sync').replace(/\.[^.]+$/, '')
-    if (format === 'ttml') downloadText(`${base}.ttml`, exportTtml(safeLines))
+    if (format === 'ttml') {
+      if (ttmlIssues.length) return
+      downloadText(ttmlFilename(ttmlOptions, base), exportTtml(safeLines, ttmlOptions))
+    }
     if (format === 'lrc') downloadText(`${base}.lrc`, exportLrc(safeLines))
     if (format === 'json') downloadText(`${base}.scsync.json`, exportProject(safeLines, audioName, syncMode))
+  }
+
+  const reviewExportLine = (number: number) => {
+    const line = safeLines[number - 1]
+    if (!line) return
+    waveRef.current?.pause()
+    setActiveLineId(line.id)
+    setSelectedLineIds([line.id])
+    setSelectionAnchorId(line.id)
+    setTimingMode('edit')
+    setStep('timing')
   }
 
   const renderStepNav = () => (
@@ -1507,19 +1467,50 @@ function App() {
       {step === 'out' && (
         <section className="screen export-screen">
           <div className="surface export-summary">
-            <h2>Ready to export</h2>
+            <h2>{ttmlIssues.length ? 'Review export' : 'Ready to export'}</h2>
             <p>{timedLines.length} of {safeLines.length} lines timed.</p>
-            <div className={issues.length ? 'quality has-issues' : 'quality'}>
-              {issues.length ? (
-                issues.map((issue) => <span key={issue}>{issue}</span>)
-              ) : (
-                <span><Check size={16} /> No blocking issues</span>
-              )}
-            </div>
+            <p>{ttmlIssues.length ? 'TTML needs review.' : <><Check size={16} /> TTML checks passed.</>}</p>
           </div>
 
+          <section className="surface ttml-options" aria-label="TTML export settings">
+            <label>
+              TTML profile
+              <select value={ttmlProfile} onChange={(event) => setTtmlProfile(event.target.value as TtmlProfile)}>
+                <option value="standard">Standard TTML</option>
+                <option value="zvonko">Zvonko TTML</option>
+              </select>
+            </label>
+            {ttmlProfile === 'zvonko' && (
+              <div className="ttml-metadata">
+                <label>Track title<input value={ttmlTitle} onChange={(event) => setTtmlTitle(event.target.value)} /></label>
+                <label>Artist<input value={ttmlArtist} onChange={(event) => setTtmlArtist(event.target.value)} /></label>
+                <label>
+                  Lyrics language
+                  <select value={ttmlLanguage} onChange={(event) => setTtmlLanguage(event.target.value as 'en-US' | 'ru-RU')}>
+                    <option value="en-US">English (Zvonko default)</option>
+                    <option value="ru-RU">Russian</option>
+                  </select>
+                </label>
+              </div>
+            )}
+          </section>
+          {ttmlIssues.length > 0 && (
+            <section className="surface ttml-checks" aria-label="TTML checks">
+              <h2>Resolve before TTML export</h2>
+              <ul>
+                {ttmlIssues.map((issue, index) => (
+                  <li key={`${issue.code}-${index}`}>
+                    {issue.line !== null && <button type="button" onClick={() => reviewExportLine(issue.line!)}>Line {issue.line}</button>}
+                    <span><strong>{issue.code}</strong> · {issue.message}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+
           <div className="export-actions">
-            <button type="button" onClick={() => exportFile('ttml')}>
+            <button type="button" disabled={ttmlIssues.length > 0} onClick={() => exportFile('ttml')}>
               <Download size={18} />
               TTML
             </button>

@@ -460,6 +460,11 @@ textarea {
   min-width: 154px;
 }
 
+.continue-btn:hover:not(:disabled),
+.primary-action:hover:not(:disabled) {
+  background: #bc83ff;
+}
+
 .waveform-surface {
   min-height: 178px;
   padding: 16px;
@@ -789,6 +794,72 @@ kbd {
 
 .export-actions button {
   min-height: 76px;
+}
+
+.ttml-options,
+.ttml-checks {
+  padding: 20px;
+}
+
+.ttml-options label {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  color: #b9afc5;
+  font-size: 13px;
+}
+
+.ttml-options select,
+.ttml-options input {
+  min-width: 0;
+  width: 100%;
+  min-height: 42px;
+  padding: 8px 10px;
+  color: #f5f3f7;
+  background: #121014;
+  border: 1px solid #363039;
+  border-radius: 6px;
+  font: inherit;
+}
+
+.ttml-metadata {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.ttml-checks h2 {
+  margin: 0 0 12px;
+  font-size: 16px;
+}
+
+.ttml-checks ul {
+  display: grid;
+  gap: 10px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.ttml-checks li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.ttml-checks button {
+  flex-shrink: 0;
+  min-height: 32px;
+  padding: 4px 10px;
+}
+
+@media (max-width: 600px) {
+  .ttml-metadata {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 860px) {

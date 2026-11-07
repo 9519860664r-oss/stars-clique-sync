@@ -25,11 +25,11 @@ exported your work.
 
 ### Windows Installers
 
-- [Download Lite 1.0.1](https://github.com/9519860664r-oss/stars-clique-sync/releases/download/v1.0.1/Stars-Clique-Sync-Lite-Setup-1.0.1.exe)
-- [Download Auto 1.0.1](https://github.com/9519860664r-oss/stars-clique-sync/releases/download/v1.0.1/Stars-Clique-Sync-Auto-Setup-1.0.1.exe)
+- [Download Lite 1.0.2](https://github.com/9519860664r-oss/stars-clique-sync/releases/download/v1.0.2/Stars-Clique-Sync-Lite-Setup-1.0.2.exe)
+- [Download Auto 1.0.2](https://github.com/9519860664r-oss/stars-clique-sync/releases/download/v1.0.2/Stars-Clique-Sync-Auto-Setup-1.0.2.exe)
 
 Both installers include English and Russian PDF manuals. Auto downloads its
-Whisper model on first use. See the [release notes](https://github.com/9519860664r-oss/stars-clique-sync/releases/tag/v1.0.1)
+Whisper model on first use. See the [release notes](https://github.com/9519860664r-oss/stars-clique-sync/releases/tag/v1.0.2)
 for system requirements and checksums.
 
 | Edition | Workflow |
@@ -73,6 +73,23 @@ Open [127.0.0.1:5174](http://127.0.0.1:5174/). Choose an audio file, paste one
 lyric phrase per line, and select **Continue**. Press Space at the start of each
 phrase and release it at the end. Review the result in **Edit**, then select
 **Save** and choose an export format.
+
+## Zvonko TTML Export
+
+In **Out**, choose **Zvonko TTML**, enter the track title and artist, then
+download **TTML**. This profile follows the structure of a file exported by
+Zvonko's own synced-lyrics editor, including title and artist metadata.
+English is the editor's default language tag; Russian is also available.
+
+Both profiles check every line before exporting. **Exceeding Time** flags a
+start or end beyond the loaded audio's duration. **Time Crossing** flags an
+interval that starts before an earlier line ends. Missing, reversed, negative,
+or sub-millisecond timings also block TTML export. Select **Line N** to return
+to the offending row in Edit. LRC and project JSON remain available for backup.
+
+Checks do not shift, reorder, or drop lyrics automatically. Use the exact audio
+master that you will deliver. Passing these local checks does not guarantee
+Zvonko moderation approval; their complete validator rules are not public.
 
 See the [developer guide](docs/development.md) for the Auto backend, Windows
 installers, and integration details.

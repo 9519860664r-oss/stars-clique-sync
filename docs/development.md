@@ -7,7 +7,7 @@ The Windows packaging commands target x64 and use PowerShell.
 
 The hosted [Lite app](https://9519860664r-oss.github.io/stars-clique-sync/) is
 built by [the Pages workflow](../.github/workflows/deploy-lite.yml). Pushes to
-`main` that change `lite/` or the workflow trigger deployment. You can also
+`main` that change `lite/`, `shared/`, or the workflow trigger deployment. You can also
 start the workflow manually from the repository's Actions tab.
 
 The workflow checks and builds Lite on Node.js 24 with the repository path as
@@ -71,6 +71,11 @@ clean Windows system.
 
 To build the web interface only, run `npm run build` in the edition folder.
 Run `npm run lint` there to check the frontend and Electron code.
+
+From the repository root, run `node --test shared/ttml.test.ts` to check the
+shared TTML validation, Zvonko serializer, and TTML/LRC timestamp rounding.
+Both frontends import `shared/ttml.ts`; keep that folder when copying a checkout.
+The Pages workflow runs these regression tests before publishing.
 
 ## Backend Reference
 
