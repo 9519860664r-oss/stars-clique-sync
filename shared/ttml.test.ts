@@ -52,6 +52,16 @@ test('identifies exact rows exceeding duration and crossing earlier intervals', 
 test('accepts adjacent lines and a final end exactly at the audio duration', () => {
   assert.deepEqual(validateTtml([{ text: 'a', start: 0, end: 5 }, { text: 'b', start: 5, end: options.duration }], options), [])
 })
+
+test('without audio, skips only the duration check and still validates intervals', () => {
+  const noAudio = { ...options, duration: null }
+  const longLine = { text: 'a', start: 300, end: 310 }
+  assert.deepEqual(validateTtml([longLine], noAudio), [])
+  assert(exportTtml([longLine], noAudio).includes('end="00:05:10.000"'))
+  assert.throws(() => exportTtml([longLine, { text: 'b', start: 309, end: 312 }], noAudio), /Time Crossing/)
+  assert.throws(() => exportTtml([{ ...longLine, end: null }], noAudio), /Missing timing/)
+  assert.throws(() => exportTtml([{ ...longLine, end: 299 }], noAudio), /Invalid interval/)
+})
 test('blocks missing, nonfinite, negative, reversed, empty and submillisecond intervals', () => {
   for (const line of [
     { text: 'a', start: null, end: 3 }, { text: 'a', start: 1, end: Infinity },

@@ -610,6 +610,7 @@ textarea {
 }
 
 .sync-focus strong {
+  overflow-wrap: anywhere;
   color: #ffffff;
   font-size: 24px;
   font-weight: 680;
@@ -624,6 +625,12 @@ textarea {
 .edit-toolbar {
   align-items: center;
   flex-wrap: wrap;
+}
+
+.edit-toolbar > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
 }
 
 .shortcut-row {
@@ -680,6 +687,10 @@ kbd {
 
 .line-list.editing .line-row {
   grid-template-columns: 44px minmax(180px, 1fr) 104px 104px 142px 136px;
+}
+
+.line-list.editing.starts-only .line-row {
+  grid-template-columns: 44px minmax(180px, 1fr) 104px 92px 136px;
 }
 
 .line-list.compact .line-row {
@@ -820,6 +831,10 @@ kbd {
   min-height: 76px;
 }
 
+.export-actions.standalone-export {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .ttml-options,
 .ttml-checks {
   padding: 20px;
@@ -895,11 +910,14 @@ kbd {
   }
 
   .in-screen,
-  .export-actions {
+  .export-actions,
+  .export-actions.standalone-export {
     grid-template-columns: 1fr;
   }
 
   .line-row,
+  .line-list.editing .line-row,
+  .line-list.editing.starts-only .line-row,
   .line-list.compact .line-row {
     grid-template-columns: 36px minmax(0, 1fr);
   }

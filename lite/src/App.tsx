@@ -12,12 +12,15 @@ import {
   RotateCcw,
 } from 'lucide-react'
 import { classifyDroppedFiles, isFileDrag, preventFileNavigation } from '../../shared/file-drop'
-import { exportTtml, formatLrcTime, ttmlFilename, validateTtml } from '../../shared/ttml'
+import { exportTtml, formatLrcTime, ttmlFilename, validateTtml, type ExportIssue } from '../../shared/ttml'
 import './App.css'
 
 type AppStep = 'in' | 'timing' | 'out'
 type TimingMode = 'sync' | 'edit'
 type TimingSource = 'empty' | 'manual' | 'edited' | 'imported'
+type ImportedDetails =
+  | { format: 'lrc'; headers: string[] }
+  | { format: 'ttml'; title: string; artist: string }
 
 type LyricLine = {
   id: string
@@ -116,12 +119,13 @@ const normalizeImportedEnds = (lines: LyricLine[]) =>
 
 const parseLrc = (content: string): LyricLine[] => {
   const parsed: LyricLine[] = []
+  const timeTag = /\[((?:\d{1,3}:)?\d{1,3}:\d{1,2}(?:[.:]\d{1,3})?)\]/g
 
   content.split(/\r?\n/).forEach((rawLine) => {
-    const timeMatches = [...rawLine.matchAll(/\[((?:\d{1,3}:)?\d{1,3}:\d{1,2}(?:[.:]\d{1,3})?)\]/g)]
+    const timeMatches = [...rawLine.matchAll(timeTag)]
     if (!timeMatches.length) return
 
-    const text = rawLine.replace(/\[[^\]]+\]/g, '').trim()
+    const text = rawLine.replace(timeTag, '').trim()
     if (!text) return
 
     timeMatches.forEach((match) => {
@@ -140,9 +144,9 @@ const parseLrc = (content: string): LyricLine[] => {
   return normalizeImportedEnds(parsed.sort((left, right) => (left.start ?? 0) - (right.start ?? 0)))
 }
 
-const parseTtml = (content: string): LyricLine[] => {
+const parseTtml = (content: string) => {
   const doc = new DOMParser().parseFromString(content, 'application/xml')
-  if (doc.querySelector('parsererror')) {
+  if (doc.querySelector('parsererror') || doc.documentElement.localName !== 'tt') {
     throw new Error('TTML XML is not valid.')
   }
 
@@ -152,9 +156,11 @@ const parseTtml = (content: string): LyricLine[] => {
       const begin = element.getAttribute('begin')
       const end = element.getAttribute('end')
       const start = begin ? parseTimingValue(begin) : null
-      const finish = end ? parseTimingValue(end) : null
+      const dur = element.getAttribute('dur')
+      const length = dur ? parseTimingValue(dur) : null
+      const finish = end ? parseTimingValue(end) : start !== null && length !== null ? start + length : null
       const text = textFromElement(element)
-      if (!text || start === null) return null
+      if (!text) return null
       return {
         id: `line-${index + 1}`,
         text,
@@ -165,15 +171,20 @@ const parseTtml = (content: string): LyricLine[] => {
     })
     .filter((line): line is LyricLine => line !== null)
 
-  return normalizeImportedEnds(parsed)
+  const metadataNs = 'http://www.w3.org/ns/ttml#metadata'
+  const title = doc.getElementsByTagNameNS(metadataNs, 'title')[0]?.textContent?.trim() ?? ''
+  const agent = doc.getElementsByTagNameNS(metadataNs, 'agent')[0]
+  const artist = agent?.getElementsByTagNameNS(metadataNs, 'name')[0]?.textContent?.trim() ?? ''
+  return { lines: parsed, details: { format: 'ttml', title, artist } satisfies ImportedDetails }
 }
 
 const parseTimedLyrics = (fileName: string, content: string) => {
   const lower = fileName.toLowerCase()
-  if (lower.endsWith('.lrc')) return parseLrc(content)
   if (lower.endsWith('.ttml') || lower.endsWith('.xml')) return parseTtml(content)
-  if (content.trim().startsWith('<')) return parseTtml(content)
-  return parseLrc(content)
+  if (!lower.endsWith('.lrc') && content.trim().startsWith('<')) return parseTtml(content)
+  const headers = content.split(/\r?\n/).map(line => line.trim())
+    .filter(line => /^\[(?:ar|al|ti|au|by|length|offset|re|ve):[^\]]*\]$/i.test(line))
+  return { lines: parseLrc(content), details: { format: 'lrc', headers } satisfies ImportedDetails }
 }
 
 const applyImportedTimings = (lyrics: string, timingLines: LyricLine[]) => {
@@ -207,6 +218,17 @@ const exportLrc = (lines: LyricLine[]) =>
     .filter(hasLineTiming)
     .map((line) => `[${formatLrcTime(line.start)}]${line.text}`)
     .join('\n')
+
+const validateLrcEdit = (lines: LyricLine[]): ExportIssue[] => {
+  if (!lines.length) return [{ line: null, code: 'No lyrics', message: 'Add at least one lyric line.' }]
+  return lines.flatMap((line, index) => {
+    const issue = (code: string, message: string) => [{ line: index + 1, code, message }]
+    if (!line.text.trim()) return issue('Empty line', 'Enter text or delete this line.')
+    if (line.start === null) return issue('Missing timing', 'Set Start.')
+    if (line.start < 0) return issue('Negative time', 'Start must be zero or greater.')
+    return []
+  })
+}
 
 
 
@@ -256,6 +278,7 @@ function App() {
   const [importedLyricsText, setImportedLyricsText] = useState('')
   const [importedLines, setImportedLines] = useState<LyricLine[]>([])
   const [importedFileName, setImportedFileName] = useState<string | null>(null)
+  const [importedDetails, setImportedDetails] = useState<ImportedDetails | null>(null)
   const [status, setStatus] = useState('')
   const [timingMode, setTimingMode] = useState<TimingMode>('sync')
   const [lines, setLines] = useState<LyricLine[]>([])
@@ -276,30 +299,36 @@ function App() {
   const safeLines = useMemo(() => lines.filter(isLyricLine), [lines])
   const activeIndex = safeLines.findIndex((line) => line.id === activeLineId)
   const activeLine = activeIndex >= 0 ? safeLines[activeIndex] : null
+  const standaloneFormat = !audioUrl ? importedDetails?.format ?? null : null
   const timedLines = useMemo(() => safeLines.filter(hasLineTiming), [safeLines])
   const playingLineId = useMemo(() => {
-    if (step !== 'timing' || timingMode !== 'edit') return null
+    if (!audioUrl || step !== 'timing' || timingMode !== 'edit') return null
     return timedLines.find((line) => currentTime >= line.start && currentTime <= line.end)?.id ?? null
-  }, [currentTime, step, timedLines, timingMode])
+  }, [audioUrl, currentTime, step, timedLines, timingMode])
 
   const ttmlOptions = useMemo(() => ({
-    duration, title: ttmlTitle, subtitle: ttmlSubtitle, artist: ttmlArtist,
-  }), [duration, ttmlTitle, ttmlSubtitle, ttmlArtist])
-  const ttmlIssues = useMemo(() => validateTtml(safeLines, ttmlOptions), [safeLines, ttmlOptions])
+    duration: audioUrl ? duration : null, title: ttmlTitle, subtitle: ttmlSubtitle, artist: ttmlArtist,
+  }), [audioUrl, duration, ttmlTitle, ttmlSubtitle, ttmlArtist])
+  const checkedFormat = standaloneFormat === 'lrc' ? 'LRC' : 'TTML'
+  const exportIssues = useMemo(() => standaloneFormat === 'lrc'
+    ? validateLrcEdit(safeLines)
+    : validateTtml(safeLines, ttmlOptions), [safeLines, standaloneFormat, ttmlOptions])
 
   const currentStepIndex = steps.indexOf(step)
   const hasPreparedProject = safeLines.length > 0
   const hasTimedLines = timedLines.length > 0
-  const canContinueFromIn = Boolean(audioUrl) && lyricsText.trim().length > 0
+  const timedCount = standaloneFormat === 'lrc' ? safeLines.filter(line => line.start !== null).length : timedLines.length
+  const canContinueFromIn = Boolean(audioUrl || importedLines.length) && lyricsText.trim().length > 0
+  const canExportProject = hasPreparedProject && (hasTimedLines || standaloneFormat !== null)
 
   const canOpenStep = useCallback(
     (target: AppStep) => {
       if (target === 'in') return true
       if (target === 'timing') return hasPreparedProject
-      if (target === 'out') return hasPreparedProject && hasTimedLines
+      if (target === 'out') return canExportProject
       return false
     },
-    [hasPreparedProject, hasTimedLines],
+    [hasPreparedProject, canExportProject],
   )
 
   useEffect(() => {
@@ -432,8 +461,10 @@ function App() {
   }, [activeLineId, step, timingMode])
 
   const prepareProject = useCallback(() => {
-    const hasImportedTiming = importedLines.some((line) => line.start !== null || line.end !== null)
-    const nextLines = hasImportedTiming ? applyImportedTimings(lyricsText, importedLines) : makeLines(lyricsText)
+    if (!canContinueFromIn) return
+    const hasImportedTiming = importedLines.length > 0
+    const prepared = hasImportedTiming ? applyImportedTimings(lyricsText, importedLines) : makeLines(lyricsText)
+    const nextLines = standaloneFormat === 'lrc' ? prepared.map(line => ({ ...line, end: null })) : prepared
     if (!nextLines.length) {
       setStatus('Paste lyrics first, then continue.')
       return
@@ -442,10 +473,15 @@ function App() {
     setLines(nextLines)
     setActiveLineId(nextLines[0]?.id ?? null)
     setHistory([])
+    if (standaloneFormat === 'ttml' && importedDetails?.format === 'ttml') {
+      setTtmlTitle(importedDetails.title)
+      setTtmlSubtitle('')
+      setTtmlArtist(importedDetails.artist)
+    }
     setTimingMode(hasImportedTiming ? 'edit' : 'sync')
     setStep('timing')
     setStatus('')
-  }, [importedLines, lyricsText])
+  }, [canContinueFromIn, importedDetails, importedLines, lyricsText, standaloneFormat])
 
   const patchLine = useCallback((lineId: string, patch: Partial<LyricLine>) => {
     setLines((current) =>
@@ -475,7 +511,7 @@ function App() {
       const index = safeLines.findIndex((line) => line.id === lineId)
       const line = safeLines[index]
       const needsTiming = line && (line.start === null || line.end === null)
-      if (!needsTiming) return
+      if (!needsTiming || !waveRef.current) return
 
       const previousTimed = safeLines
         .slice(0, index)
@@ -579,8 +615,9 @@ function App() {
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (isEditableTarget(event.target) || event.repeat) return
+      if (step !== 'timing' || isEditableTarget(event.target) || event.repeat) return
       if (event.code === 'Space') {
+        if (!waveRef.current || !duration) return
         event.preventDefault()
         handleSpaceDown()
       }
@@ -598,14 +635,14 @@ function App() {
         const previous = safeLines[Math.max(0, activeIndex - 1)]
         if (previous) selectLine(previous.id)
       }
-      if (event.code === 'Enter') {
+      if (event.code === 'Enter' && waveRef.current) {
         event.preventDefault()
         playActiveLine()
       }
     }
 
     const onKeyUp = (event: KeyboardEvent) => {
-      if (isEditableTarget(event.target)) return
+      if (step !== 'timing' || !waveRef.current || !duration || isEditableTarget(event.target)) return
       if (event.code === 'Space') {
         event.preventDefault()
         handleSpaceUp()
@@ -620,16 +657,23 @@ function App() {
     }
   }, [
     activeIndex,
+    duration,
     handleSpaceDown,
     handleSpaceUp,
     playActiveLine,
     safeLines,
     selectLine,
+    step,
     undoLastLine,
   ])
 
   const onAudioChange = (file: File | null) => {
     if (!file) return
+    if (standaloneFormat) {
+      setLines([])
+      setActiveLineId(null)
+      setHistory([])
+    }
     setFileDropError('')
     if (audioUrl) URL.revokeObjectURL(audioUrl)
     setAudioName(file.name)
@@ -650,7 +694,7 @@ function App() {
 
     try {
       const content = await file.text()
-      const nextLines = parseTimedLyrics(file.name, content)
+      const { lines: nextLines, details } = parseTimedLyrics(file.name, content)
       if (!nextLines.length) {
         setStatus('No timed lyric lines found in this file.')
         return
@@ -658,14 +702,15 @@ function App() {
 
       const nextText = nextLines.map((line) => line.text).join('\n')
       setImportedFileName(file.name)
+      setImportedDetails(details)
       setImportedLines(nextLines)
       setImportedLyricsText(nextText)
       setLyricsText(nextText)
-      setStatus(`Imported ${nextLines.length} timed lines with timings. Continue opens Edit mode.`)
+      setLines([])
+      setActiveLineId(null)
+      setHistory([])
+      setStatus(`Imported ${nextLines.length} lyric lines.`)
     } catch (error) {
-      setImportedFileName(null)
-      setImportedLines([])
-      setImportedLyricsText('')
       setStatus(error instanceof Error ? `Import failed: ${error.message}` : 'Import failed.')
     }
   }
@@ -750,7 +795,7 @@ function App() {
       }
 
       setActiveLineId(first.id)
-      setStatus('Line split. Both new lines need manual sync.')
+      setStatus(audioUrl ? 'Line split. Both new lines need manual sync.' : 'Line split. Set the new timings.')
       return [...current.slice(0, index), first, second, ...current.slice(index + 1)]
     })
   }
@@ -772,7 +817,7 @@ function App() {
     setSyncStart(null)
     startDraftRef.current = null
     recordingPreviousRef.current = null
-    setStatus('Line timing reset. Hold Space to sync it again.')
+    setStatus(audioUrl ? 'Line timing reset. Hold Space to sync it again.' : 'Line timing reset.')
   }
 
   const deleteLine = (lineId: string) => {
@@ -791,16 +836,25 @@ function App() {
   const saveAndOpenOut = () => {
     waveRef.current?.pause()
     setLines((current) => current.filter((line) => line.text.trim()))
-    if (hasTimedLines) setStep('out')
+    if (canExportProject) setStep('out')
   }
 
   const exportFile = (format: 'ttml' | 'lrc' | 'json') => {
-    const base = (audioName ?? 'stars-clique-sync-lite').replace(/\.[^.]+$/, '')
+    const base = (audioName ?? importedFileName ?? 'stars-clique-sync-lite').replace(/\.[^.]+$/, '')
     if (format === 'ttml') {
-      if (ttmlIssues.length) return
+      if (standaloneFormat === 'lrc' || exportIssues.length) return
       downloadText(ttmlFilename(ttmlOptions, base), exportTtml(safeLines, ttmlOptions))
     }
-    if (format === 'lrc') downloadText(`${base}.lrc`, exportLrc(safeLines))
+    if (format === 'lrc') {
+      if (standaloneFormat === 'ttml') return
+      if (standaloneFormat === 'lrc' && importedDetails?.format === 'lrc') {
+        if (exportIssues.length) return
+        const rows = safeLines.map(line => `[${formatLrcTime(line.start!)}]${line.text}`)
+        downloadText(`${base}.lrc`, [...importedDetails.headers, ...rows].join('\n'))
+      } else {
+        downloadText(`${base}.lrc`, exportLrc(safeLines))
+      }
+    }
     if (format === 'json') downloadText(`${base}.scsync.json`, exportProject(safeLines, audioName))
   }
 
@@ -824,7 +878,7 @@ function App() {
           onClick={() => goToStep(item)}
         >
           <span>{index + 1}</span>
-          {stepLabels[item]}
+          {item === 'timing' && standaloneFormat ? 'Edit' : stepLabels[item]}
         </button>
       ))}
     </nav>
@@ -850,7 +904,6 @@ function App() {
         aria-label="Track position"
         onChange={(event) => seekToTime(Number(event.target.value))}
       />
-      {!audioUrl && <div className="wave-empty">Choose audio on In step</div>}
     </section>
   )
 
@@ -859,7 +912,7 @@ function App() {
       ref={lineListRef}
       className={`${compact ? 'line-list compact' : 'line-list'} ${
         timingMode === 'edit' && !compact ? 'editing' : ''
-      }`}
+      }${standaloneFormat === 'lrc' ? ' starts-only' : ''}`}
     >
       {safeLines.map((line, index) => (
         <div
@@ -872,12 +925,13 @@ function App() {
             line.id === playingLineId ? 'playing' : ''
           } ${line.start !== null && line.end !== null && index < activeIndex ? 'synced' : ''}`}
           onClick={() => selectLine(line.id)}
-          onDoubleClick={() => seekToLine(line)}
+          onDoubleClick={audioUrl ? () => seekToLine(line) : undefined}
         >
           <span className="line-number">{pad(index + 1)}</span>
           {timingMode === 'edit' && !compact ? (
             <input
               className="line-text-input"
+              aria-label={`Line ${index + 1} text`}
               value={line.text}
               onClick={(event) => {
                 event.stopPropagation()
@@ -905,7 +959,7 @@ function App() {
                   onChange={(event) => onTimeEdit(line.id, 'start', event.target.value)}
                 />
               </label>
-              <label>
+              {standaloneFormat !== 'lrc' && <label>
                 End
                 <input
                   type="number"
@@ -914,10 +968,12 @@ function App() {
                   onClick={(event) => event.stopPropagation()}
                   onChange={(event) => onTimeEdit(line.id, 'end', event.target.value)}
                 />
-              </label>
+              </label>}
             </>
           )}
-          <span className="time-range">{formatClock(line.start)} - {formatClock(line.end)}</span>
+          <span className="time-range">
+            {formatClock(line.start)}{standaloneFormat !== 'lrc' && ` - ${formatClock(line.end)}`}
+          </span>
           {timingMode === 'edit' && !compact && (
             <div className="row-actions">
               <button
@@ -993,7 +1049,7 @@ function App() {
       <header className="app-header">
         <div>
           <p>Stars Clique Sync Lite <span>v1</span></p>
-          <h1>{stepLabels[step]}</h1>
+          <h1>{step === 'timing' && standaloneFormat ? 'Edit' : stepLabels[step]}</h1>
         </div>
         {renderStepNav()}
       </header>
@@ -1001,14 +1057,13 @@ function App() {
       {step === 'in' && (
         <section className="screen in-screen">
           <div className="surface intro-copy">
-            <h2>Start a manual sync project</h2>
-            <p>Load audio, paste lyrics, then hold Space line by line.</p>
+            <h2>Sync or edit lyrics</h2>
           </div>
 
           <div className="surface input-card">
             <div className="field-head">
               <FileAudio size={18} />
-              <span>Audio</span>
+              <span>Audio (optional with LRC / TTML)</span>
             </div>
             <label className="file-input">
               <input type="file" accept="audio/*" onChange={(event) => {
@@ -1053,38 +1108,44 @@ function App() {
 
       {step === 'timing' && (
         <section className="screen sync-screen">
-          {renderWaveform()}
+          {audioUrl && renderWaveform()}
 
           <div className="surface sync-card">
             <div className="sync-focus">
               <span>{timingMode === 'sync' ? 'Selected line' : 'Edit synced lines'}</span>
-              <strong>{timingMode === 'sync' ? activeLine?.text ?? 'No line selected' : 'Review, rewrite, delete, then save'}</strong>
+              <strong>{standaloneFormat ? importedFileName : timingMode === 'sync'
+                ? activeLine?.text ?? 'No line selected'
+                : 'Review, rewrite, delete, then save'}</strong>
               {timingMode === 'sync' && (
                 <em className="sync-recording">{syncStart !== null ? `Recording from ${formatClock(syncStart)}` : null}</em>
               )}
             </div>
             <div className="transport">
-              <button type="button" onClick={togglePlay} className="primary-action">
-                {isPlaying ? <Pause size={18} /> : <Play size={18} />}
-                {isPlaying ? 'Pause' : 'Play'}
-              </button>
-              <button type="button" onClick={undoLastLine} disabled={!history.length}>
-                <RotateCcw size={17} />
-                Undo
-              </button>
+              {audioUrl && (
+                <>
+                  <button type="button" onClick={togglePlay} className="primary-action">
+                    {isPlaying ? <Pause size={18} /> : <Play size={18} />}
+                    {isPlaying ? 'Pause' : 'Play'}
+                  </button>
+                  <button type="button" onClick={undoLastLine} disabled={!history.length}>
+                    <RotateCcw size={17} />
+                    Undo
+                  </button>
+                </>
+              )}
               {timingMode === 'sync' ? (
                 <button type="button" disabled={!hasTimedLines} onClick={enterEditMode}>
                   Edit
                   <ArrowRight size={17} />
                 </button>
               ) : (
-                <button type="button" disabled={!hasTimedLines} onClick={saveAndOpenOut}>
+                <button type="button" className={standaloneFormat ? 'primary-action' : undefined} disabled={!canExportProject} onClick={saveAndOpenOut}>
                   Save
                   <ArrowRight size={17} />
                 </button>
               )}
             </div>
-            {timingMode === 'sync' ? (
+            {audioUrl && (timingMode === 'sync' ? (
               <div className="shortcut-row">
                 <span><kbd>Space</kbd> hold</span>
                 <span><kbd>Esc</kbd> undo</span>
@@ -1097,19 +1158,19 @@ function App() {
                 <span><kbd>Space</kbd> hold to resync selected line</span>
                 <span><kbd>Enter</kbd> replay selected line</span>
               </div>
-            )}
+            ))}
           </div>
 
           <div className="surface editor-card">
             <div className="edit-toolbar">
               <div>
                 <span>{timingMode === 'sync' ? 'Manual timing' : 'Edit mode'}</span>
-                <strong>{timedLines.length} of {safeLines.length} lines timed</strong>
+                <strong>{timedCount} of {safeLines.length} lines timed</strong>
               </div>
-              <button type="button" onClick={playActiveLine} disabled={!activeLine || activeLine.start === null}>
+              {audioUrl && <button type="button" onClick={playActiveLine} disabled={!activeLine || activeLine.start === null}>
                 <Play size={16} />
                 Replay
-              </button>
+              </button>}
             </div>
             {status && <div className="status-note inline"><span>{status}</span></div>}
             {renderLineList()}
@@ -1121,20 +1182,21 @@ function App() {
         <section className="screen out-screen">
           <div className="surface export-summary">
             <Check size={22} />
-            <h2>{ttmlIssues.length ? 'Review export' : 'Export ready'}</h2>
-            <p>{timedLines.length} of {safeLines.length} lines timed. {ttmlIssues.length ? 'TTML needs review.' : 'TTML checks passed.'}</p>
+            <h2>{exportIssues.length ? 'Review export' : 'Export ready'}</h2>
+            <p>{timedCount} of {safeLines.length} lines timed. {checkedFormat} {exportIssues.length ? 'needs review.' : 'checks passed.'}</p>
+            {standaloneFormat === 'ttml' && <p>Audio duration not checked.</p>}
           </div>
 
-          <section className="surface ttml-options ttml-metadata" aria-label="Track details">
+          {standaloneFormat !== 'lrc' && <section className="surface ttml-options ttml-metadata" aria-label="Track details">
             <label>Title<input placeholder="Optional" value={ttmlTitle} onChange={(event) => setTtmlTitle(event.target.value)} /></label>
             <label>Subtitle<input placeholder="Optional" value={ttmlSubtitle} onChange={(event) => setTtmlSubtitle(event.target.value)} /></label>
             <label>Artist<input placeholder="Optional" value={ttmlArtist} onChange={(event) => setTtmlArtist(event.target.value)} /></label>
-          </section>
-          {ttmlIssues.length > 0 && (
-            <section className="surface ttml-checks" aria-label="TTML checks">
-              <h2>Resolve before TTML export</h2>
+          </section>}
+          {exportIssues.length > 0 && (
+            <section className="surface ttml-checks" aria-label={`${checkedFormat} checks`}>
+              <h2>Resolve before {checkedFormat} export</h2>
               <ul>
-                {ttmlIssues.map((issue, index) => (
+                {exportIssues.map((issue, index) => (
                   <li key={`${issue.code}-${index}`}>
                     {issue.line !== null && <button type="button" onClick={() => reviewExportLine(issue.line!)}>Line {issue.line}</button>}
                     <span><strong>{issue.code}</strong> · {issue.message}</span>
@@ -1146,15 +1208,20 @@ function App() {
 
 
           <div className="surface export-card">
-            <div className="export-actions">
-              <button type="button" className="primary-action" disabled={ttmlIssues.length > 0} onClick={() => exportFile('ttml')}>
+            <div className={`export-actions${standaloneFormat ? ' standalone-export' : ''}`}>
+              {standaloneFormat !== 'lrc' && <button type="button" className="primary-action" disabled={exportIssues.length > 0} onClick={() => exportFile('ttml')}>
                 <Download size={18} />
                 TTML
-              </button>
-              <button type="button" onClick={() => exportFile('lrc')}>
+              </button>}
+              {standaloneFormat !== 'ttml' && <button
+                type="button"
+                className={standaloneFormat === 'lrc' ? 'primary-action' : undefined}
+                disabled={standaloneFormat === 'lrc' && exportIssues.length > 0}
+                onClick={() => exportFile('lrc')}
+              >
                 <Download size={18} />
                 LRC
-              </button>
+              </button>}
               <button type="button" onClick={() => exportFile('json')}>
                 <Download size={18} />
                 Project JSON

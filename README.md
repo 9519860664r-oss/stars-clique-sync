@@ -26,6 +26,11 @@ exported your work.
 On **In**, drop audio onto the page or use the file picker. Lite also accepts
 one LRC or TTML file, either separately or in the same drop as the audio.
 
+To edit an LRC or TTML file without audio, import it on **In** and select
+**Continue**. Edit the lyrics and timestamps, select **Save**, and download
+the original format. LRC stores only line starts. TTML timing checks still
+run, except for the audio duration limit.
+
 ### Windows Installers
 
 - [Download Lite 1.0.6](https://github.com/9519860664r-oss/stars-clique-sync/releases/download/v1.0.6/Stars-Clique-Sync-Lite-Setup-1.0.6.exe)

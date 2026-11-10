@@ -1,6 +1,6 @@
 type ExportLine = { text: string; start: number | null; end: number | null }
 export type TtmlOptions = {
-  duration: number
+  duration: number | null
   title: string
   subtitle: string
   artist: string
@@ -24,8 +24,9 @@ export function formatLrcTime(time: number) {
 export function validateTtml(lines: ExportLine[], options: TtmlOptions): ExportIssue[] {
   const issues: ExportIssue[] = []
   const add = (line: number | null, code: string, message: string) => issues.push({ line, code, message })
-  const durationKnown = Number.isFinite(options.duration) && options.duration > 0
-  if (!durationKnown) add(null, 'Audio duration', 'Wait for the audio to load before exporting.')
+  const { duration } = options
+  const durationKnown = duration !== null && Number.isFinite(duration) && duration > 0
+  if (duration !== null && !durationKnown) add(null, 'Audio duration', 'Wait for the audio to load before exporting.')
   if (!lines.length) add(null, 'No lyrics', 'Add at least one lyric line.')
   if (invalidXml.test(options.title + options.subtitle + options.artist)) add(null, 'Invalid text', 'Metadata contains unsupported XML characters.')
   let latestEnd = -1
@@ -43,8 +44,8 @@ export function validateTtml(lines: ExportLine[], options: TtmlOptions): ExportI
     if (end <= start || milliseconds(end) <= milliseconds(start)) {
       add(number, 'Invalid interval', 'End must follow Start by at least one exported millisecond.')
     }
-    if (durationKnown && (start > options.duration || end > options.duration)) {
-      add(number, 'Exceeding Time', `Timing exceeds the audio duration (${formatTtmlTime(options.duration)}).`)
+    if (durationKnown && (start > duration || end > duration)) {
+      add(number, 'Exceeding Time', `Timing exceeds the audio duration (${formatTtmlTime(duration)}).`)
     }
     if (start < latestEnd || milliseconds(start) < milliseconds(latestEnd)) {
       add(number, 'Time Crossing', `Start precedes the end of line ${latestLine}.`)
