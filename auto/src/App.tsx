@@ -1,4 +1,4 @@
-import { type MouseEvent as ReactMouseEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { type DragEvent as ReactDragEvent, type MouseEvent as ReactMouseEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import WaveSurfer from 'wavesurfer.js'
 import RegionsPlugin, { type Region } from 'wavesurfer.js/dist/plugins/regions.esm.js'
 import {
@@ -15,6 +15,7 @@ import {
   Sparkles,
   TimerReset,
 } from 'lucide-react'
+import { classifyDroppedFiles, isFileDrag, preventFileNavigation } from '../../shared/file-drop'
 import { exportTtml, formatLrcTime, ttmlFilename, validateTtml } from '../../shared/ttml'
 import './App.css'
 
@@ -475,6 +476,10 @@ function App() {
   const [ttmlTitle, setTtmlTitle] = useState('')
   const [ttmlSubtitle, setTtmlSubtitle] = useState('')
   const [ttmlArtist, setTtmlArtist] = useState('')
+  const [isFileOver, setIsFileOver] = useState(false)
+  const [fileDropError, setFileDropError] = useState('')
+
+  useEffect(preventFileNavigation, [])
 
   const safeLines = useMemo(() => lines.filter(isLyricLine), [lines])
   const activeIndex = safeLines.findIndex((line) => line.id === activeLineId)
@@ -864,6 +869,8 @@ function App() {
     recordingPreviousRef.current = null
     setStep('in')
     setAudioFile(null)
+    setFileDropError('')
+    setIsFileOver(false)
     setAudioName(null)
     setTtmlSubtitle('')
     setTtmlTitle('')
@@ -1003,6 +1010,7 @@ function App() {
 
   const onAudioChange = (file: File | null) => {
     if (!file) return
+    setFileDropError('')
     if (audioUrl) URL.revokeObjectURL(audioUrl)
     setAudioFile(file)
     setAudioName(file.name)
@@ -1226,8 +1234,39 @@ function App() {
     </div>
   )
 
+  const onFileDragOver = (event: ReactDragEvent<HTMLElement>) => {
+    if (!isFileDrag(event.dataTransfer)) return
+    event.preventDefault()
+    event.dataTransfer.dropEffect = 'copy'
+    setIsFileOver(true)
+  }
+
+  const onFileDragLeave = (event: ReactDragEvent<HTMLElement>) => {
+    if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return
+    setIsFileOver(false)
+  }
+
+  const onFileDrop = (event: ReactDragEvent<HTMLElement>) => {
+    if (!isFileDrag(event.dataTransfer)) return
+    event.preventDefault()
+    setIsFileOver(false)
+    const { audio, error } = classifyDroppedFiles(event.dataTransfer.files, false)
+    if (error) {
+      setFileDropError(error)
+      return
+    }
+    if (audio) onAudioChange(audio)
+  }
+
+  const canDropFiles = step === 'in' && !isPreparing && !isRecognizing
+
   return (
-    <main className="app-shell">
+    <main
+      className={canDropFiles && isFileOver ? 'app-shell is-file-over' : 'app-shell'}
+      onDragOver={canDropFiles ? onFileDragOver : undefined}
+      onDragLeave={onFileDragLeave}
+      onDrop={canDropFiles ? onFileDrop : undefined}
+    >
       <header className="app-header">
         <div>
           <p>Stars Clique Sync <span>v1</span></p>
@@ -1259,10 +1298,15 @@ function App() {
                 ref={audioInputRef}
                 type="file"
                 accept="audio/*"
-                onChange={(event) => onAudioChange(event.target.files?.[0] ?? null)}
+                disabled={isPreparing || isRecognizing}
+                onChange={(event) => {
+                  onAudioChange(event.currentTarget.files?.[0] ?? null)
+                  event.currentTarget.value = ''
+                }}
               />
-              <strong>{audioName ?? 'Choose audio file'}</strong>
+              <strong>{audioName ?? 'Choose or drop audio'}</strong>
             </label>
+            {fileDropError && <p className="file-drop-error" role="status">{fileDropError}</p>}
           </div>
 
           <div className="surface input-card">

@@ -44,9 +44,9 @@ jobs:
           ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
       - name: Check code
         run: npm run lint
-      - name: Test TTML validation and export
+      - name: Test shared import and export logic
         working-directory: .
-        run: node --test shared/ttml.test.ts
+        run: node --test shared/*.test.ts
       - name: Build Lite
         run: npm run build -- --base="$PAGES_BASE"
         env:

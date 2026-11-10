@@ -308,18 +308,42 @@
   border: 1px solid rgba(168, 94, 255, 0.28);
   border-radius: 8px;
   cursor: pointer;
+  position: relative;
   display: flex;
   min-height: 84px;
   padding: 16px;
 }
 
 .file-input input {
-  display: none;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.file-input:focus-within {
+  outline: 2px solid #a85eff;
+  outline-offset: 3px;
+}
+
+.is-file-over .file-input {
+  border-color: #a85eff;
+  background: rgba(168, 94, 255, 0.12);
+}
+
+.file-drop-error {
+  margin: 8px 0 0;
+  color: #ffb7c8;
+  font-size: 13px;
 }
 
 .file-input strong {
   color: #ffffff;
   font-weight: 650;
+  overflow-wrap: anywhere;
 }
 
 .segmented,

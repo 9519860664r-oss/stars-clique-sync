@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { type DragEvent as ReactDragEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import WaveSurfer from 'wavesurfer.js'
 import RegionsPlugin, { type Region } from 'wavesurfer.js/dist/plugins/regions.esm.js'
 import {
@@ -11,6 +11,7 @@ import {
   Play,
   RotateCcw,
 } from 'lucide-react'
+import { classifyDroppedFiles, isFileDrag, preventFileNavigation } from '../../shared/file-drop'
 import { exportTtml, formatLrcTime, ttmlFilename, validateTtml } from '../../shared/ttml'
 import './App.css'
 
@@ -267,6 +268,10 @@ function App() {
   const [ttmlTitle, setTtmlTitle] = useState('')
   const [ttmlSubtitle, setTtmlSubtitle] = useState('')
   const [ttmlArtist, setTtmlArtist] = useState('')
+  const [isFileOver, setIsFileOver] = useState(false)
+  const [fileDropError, setFileDropError] = useState('')
+
+  useEffect(preventFileNavigation, [])
 
   const safeLines = useMemo(() => lines.filter(isLyricLine), [lines])
   const activeIndex = safeLines.findIndex((line) => line.id === activeLineId)
@@ -625,6 +630,7 @@ function App() {
 
   const onAudioChange = (file: File | null) => {
     if (!file) return
+    setFileDropError('')
     if (audioUrl) URL.revokeObjectURL(audioUrl)
     setAudioName(file.name)
     setTtmlSubtitle('')
@@ -640,6 +646,7 @@ function App() {
 
   const onTimedLyricsImport = async (file: File | null) => {
     if (!file) return
+    setFileDropError('')
 
     try {
       const content = await file.text()
@@ -949,8 +956,40 @@ function App() {
     </div>
   )
 
+  const onFileDragOver = (event: ReactDragEvent<HTMLElement>) => {
+    if (!isFileDrag(event.dataTransfer)) return
+    event.preventDefault()
+    event.dataTransfer.dropEffect = 'copy'
+    setIsFileOver(true)
+  }
+
+  const onFileDragLeave = (event: ReactDragEvent<HTMLElement>) => {
+    if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return
+    setIsFileOver(false)
+  }
+
+  const onFileDrop = (event: ReactDragEvent<HTMLElement>) => {
+    if (!isFileDrag(event.dataTransfer)) return
+    event.preventDefault()
+    setIsFileOver(false)
+    const { audio, lyrics, error } = classifyDroppedFiles(event.dataTransfer.files, true)
+    if (error) {
+      setFileDropError(error)
+      return
+    }
+    if (audio) onAudioChange(audio)
+    if (lyrics) void onTimedLyricsImport(lyrics)
+  }
+
+  const canDropFiles = step === 'in'
+
   return (
-    <main className="app-shell">
+    <main
+      className={canDropFiles && isFileOver ? 'app-shell is-file-over' : 'app-shell'}
+      onDragOver={canDropFiles ? onFileDragOver : undefined}
+      onDragLeave={onFileDragLeave}
+      onDrop={canDropFiles ? onFileDrop : undefined}
+    >
       <header className="app-header">
         <div>
           <p>Stars Clique Sync Lite <span>v1</span></p>
@@ -972,9 +1011,13 @@ function App() {
               <span>Audio</span>
             </div>
             <label className="file-input">
-              <input type="file" accept="audio/*" onChange={(event) => onAudioChange(event.target.files?.[0] ?? null)} />
-              <strong>{audioName ?? 'Choose audio file'}</strong>
+              <input type="file" accept="audio/*" onChange={(event) => {
+                onAudioChange(event.currentTarget.files?.[0] ?? null)
+                event.currentTarget.value = ''
+              }} />
+              <strong>{audioName ?? 'Choose or drop audio'}</strong>
             </label>
+            {fileDropError && <p className="file-drop-error" role="status">{fileDropError}</p>}
           </div>
 
           <div className="surface input-card">
@@ -991,7 +1034,10 @@ function App() {
               <input
                 type="file"
                 accept=".lrc,.ttml,.xml,text/plain,application/xml"
-                onChange={(event) => onTimedLyricsImport(event.target.files?.[0] ?? null)}
+                onChange={(event) => {
+                  void onTimedLyricsImport(event.currentTarget.files?.[0] ?? null)
+                  event.currentTarget.value = ''
+                }}
               />
               <strong>{importedFileName ?? 'Import LRC / TTML for edit'}</strong>
             </label>

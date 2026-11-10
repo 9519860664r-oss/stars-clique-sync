@@ -23,13 +23,16 @@ Use manual timing, import LRC or TTML, edit lines, and export directly in your
 browser. Audio and lyrics stay on your device. Keep the tab open until you have
 exported your work.
 
+On **In**, drop audio onto the page or use the file picker. Lite also accepts
+one LRC or TTML file, either separately or in the same drop as the audio.
+
 ### Windows Installers
 
-- [Download Lite 1.0.5](https://github.com/9519860664r-oss/stars-clique-sync/releases/download/v1.0.5/Stars-Clique-Sync-Lite-Setup-1.0.5.exe)
-- [Download Auto 1.0.5](https://github.com/9519860664r-oss/stars-clique-sync/releases/download/v1.0.5/Stars-Clique-Sync-Auto-Setup-1.0.5.exe)
+- [Download Lite 1.0.6](https://github.com/9519860664r-oss/stars-clique-sync/releases/download/v1.0.6/Stars-Clique-Sync-Lite-Setup-1.0.6.exe)
+- [Download Auto 1.0.6](https://github.com/9519860664r-oss/stars-clique-sync/releases/download/v1.0.6/Stars-Clique-Sync-Auto-Setup-1.0.6.exe)
 
 Both installers include English and Russian PDF manuals. Auto downloads its
-Whisper model on first use. See the [release notes](https://github.com/9519860664r-oss/stars-clique-sync/releases/tag/v1.0.5)
+Whisper model on first use. See the [release notes](https://github.com/9519860664r-oss/stars-clique-sync/releases/tag/v1.0.6)
 for system requirements and checksums.
 
 | Edition | Workflow |
